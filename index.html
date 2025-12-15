@@ -3,254 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PZEM-017 IoT Dashboard</title>
+    <title>PZEM-017 Anime Dashboard</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
     
-    <link href="https://fonts.cdnfonts.com/css/digital-7-mono" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Kosugi+Maru&family=Orbitron:wght@700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary-glow: #0ff;
-            --secondary-glow: #f0f;
-            --bg-color: #050505;
-            --panel-bg: rgba(16, 20, 24, 0.8);
-            --border-color: #0ff;
+            --primary: #FF6B9D;   /* Anime Pink */
+            --secondary: #4ECDC4; /* Teal/Cyan */
+            --accent: #FFE66D;    /* Soft Yellow */
+            --dark-text: #2C3E50;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --card-border: 2px solid white;
         }
 
         body {
-            background-color: var(--bg-color);
-            background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 30px 30px;
-            color: white;
-            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            background-attachment: fixed;
+            font-family: 'Kosugi Maru', sans-serif; /* Font bulat seperti subtitle anime */
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
+            color: var(--dark-text);
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Latar Belakang Pola Garis/Grid halus */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+        }
+
+        /* Header Area */
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            background: white;
+            padding: 10px 40px;
+            border-radius: 50px;
+            box-shadow: 0 10px 25px rgba(255, 107, 157, 0.3);
+            border: 4px solid var(--primary);
         }
 
         h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--primary);
+            margin: 0;
+            font-size: 2.5rem;
             text-transform: uppercase;
-            letter-spacing: 5px;
-            text-shadow: 0 0 10px var(--primary-glow);
-            margin-bottom: 5px;
+            letter-spacing: 2px;
+            -webkit-text-stroke: 1px white;
         }
 
+        .subtitle {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        /* Status Badge */
         #status {
-            font-size: 0.8rem;
-            color: #555;
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 20px;
             margin-bottom: 30px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
         }
+        .status-connected { color: #2ecc71; border: 2px solid #2ecc71; }
+        .status-disconnected { color: #e74c3c; border: 2px solid #e74c3c; }
 
-        .status-connected { color: #0f0 !important; text-shadow: 0 0 5px #0f0; }
-        .status-disconnected { color: #f00 !important; text-shadow: 0 0 5px #f00; }
-
-        /* Container Grid */
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
+        /* Layout Utama: Grid Dashboard */
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
         }
 
-        /* Card Style */
+        /* Area Karakter (Opsional: Bisa diisi gambar waifu/anime) */
+        .character-area {
+            display: none; /* Ubah ke 'block' jika ingin menampilkan gambar di layar besar */
+            width: 200px;
+            align-self: center;
+        }
+        
+        @media(min-width: 1000px) {
+            .character-area { display: block; }
+        }
+
+        .dashboard {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+        }
+
+        /* Card Style - Anime Pop Style */
         .card {
-            background: var(--panel-bg);
-            border: 1px solid rgba(0, 255, 255, 0.3);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 3px solid white;
             padding: 20px;
             position: relative;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
-            clip-path: polygon(
-                10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%
-            ); /* Bentuk sudut futuristik */
-            transition: transform 0.3s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Animasi Card berbeda durasi agar tidak bareng */
+        .card:nth-child(1) { animation-delay: 0s; border-bottom: 5px solid #FF6B9D; }
+        .card:nth-child(2) { animation-delay: 1s; border-bottom: 5px solid #4ECDC4; }
+        .card:nth-child(3) { animation-delay: 2s; border-bottom: 5px solid #FF9F43; }
+        .card:nth-child(4) { animation-delay: 3s; border-bottom: 5px solid #A29BFE; }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
-            border-color: var(--primary-glow);
+            transform: translateY(-15px) scale(1.02);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            z-index: 10;
         }
 
-        /* Label */
-        .card-label {
-            font-size: 1rem;
-            color: #aaa;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+        /* Label Card */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed #ddd;
             padding-bottom: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
-        /* Seven Segment Value */
-        .value {
-            font-family: 'Digital-7 Mono', monospace;
-            font-size: 4rem;
-            color: var(--primary-glow);
-            text-shadow: 0 0 10px var(--primary-glow);
+        .card-label {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--dark-text);
+            text-transform: uppercase;
+        }
+
+        .jp-label {
+            font-size: 0.8rem;
+            color: #999;
+            font-weight: normal;
+        }
+
+        /* Icon Circle */
+        .icon-circle {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-family: 'Fredoka One';
+        }
+
+        /* Value Display */
+        .value-container {
             text-align: right;
+        }
+
+        .value {
+            font-family: 'Orbitron', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
             line-height: 1;
+            /* Gradient Text */
+            background: -webkit-linear-gradient(45deg, var(--dark-text), #555);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .unit {
-            font-size: 1.5rem;
-            font-family: 'Orbitron', sans-serif;
-            color: white;
-            text-shadow: none;
+            font-size: 1.2rem;
+            color: #888;
+            font-family: 'Fredoka One', cursive;
             margin-left: 5px;
+            -webkit-text-fill-color: #888; /* Reset gradient */
         }
 
         /* Warna Khusus per elemen */
-        .v-color { color: #00eaff; text-shadow: 0 0 10px #00eaff; } /* Cyan */
-        .a-color { color: #ff0055; text-shadow: 0 0 10px #ff0055; } /* Pink/Red */
-        .w-color { color: #00ff66; text-shadow: 0 0 10px #00ff66; } /* Green */
-        .e-color { color: #ffee00; text-shadow: 0 0 10px #ffee00; } /* Yellow */
+        .bg-volt { background: #FF6B9D; color: #FF6B9D; }
+        .bg-amp { background: #4ECDC4; color: #4ECDC4; }
+        .bg-watt { background: #FF9F43; color: #FF9F43; }
+        .bg-kwh { background: #A29BFE; color: #A29BFE; }
 
-        /* Dekorasi sudut */
-        .corner {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            border: 2px solid white;
-            opacity: 0.5;
-        }
-        .top-right { top: 5px; right: 5px; border-bottom: none; border-left: none; }
-        .bottom-left { bottom: 5px; left: 5px; border-top: none; border-right: none; }
+        /* Text colors for values matching icons */
+        .txt-volt { background: -webkit-linear-gradient(45deg, #FF6B9D, #ff8fa3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .txt-amp { background: -webkit-linear-gradient(45deg, #4ECDC4, #26de81); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .txt-watt { background: -webkit-linear-gradient(45deg, #FF9F43, #feca57); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .txt-kwh { background: -webkit-linear-gradient(45deg, #A29BFE, #6c5ce7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         footer {
-            margin-top: 50px;
-            font-size: 0.7rem;
-            color: #444;
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: white;
+            background: rgba(0,0,0,0.2);
+            padding: 5px 20px;
+            border-radius: 20px;
         }
     </style>
 </head>
 <body>
 
-    <h1>Power Monitor System</h1>
+    <header>
+        <h1>Power System</h1>
+        <div class="subtitle">PZEM-017 • モニ터リングシステム</div>
+    </header>
+
     <div id="status" class="status-disconnected">System Status: CONNECTING...</div>
 
-    <div class="dashboard">
-        <div class="card">
-            <div class="corner top-right"></div>
-            <div class="corner bottom-left"></div>
-            <div class="card-label">Voltage / Tegangan</div>
-            <div class="value v-color">
-                <span id="val-volt">000</span><span class="unit">V</span>
-            </div>
+    <div class="main-container">
+        <div class="character-area">
+            <img src="https://upload.wikimedia.org/wikipedia/en/9/90/Hatsune_Miku_V4X.png" alt="Mascot" style="width: 100%; filter: drop-shadow(0 0 10px rgba(255,255,255,0.5)); opacity: 0.9;">
         </div>
 
-        <div class="card">
-            <div class="corner top-right"></div>
-            <div class="corner bottom-left"></div>
-            <div class="card-label">Current / Arus</div>
-            <div class="value a-color">
-                <span id="val-amp">0.00</span><span class="unit">A</span>
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-label">Voltage</div>
+                        <div class="jp-label">電圧 (Volt)</div>
+                    </div>
+                    <div class="icon-circle bg-volt">V</div>
+                </div>
+                <div class="value-container">
+                    <span id="val-volt" class="value txt-volt">000</span>
+                    <span class="unit">V</span>
+                </div>
             </div>
-        </div>
 
-        <div class="card">
-            <div class="corner top-right"></div>
-            <div class="corner bottom-left"></div>
-            <div class="card-label">Active Power / Daya</div>
-            <div class="value w-color">
-                <span id="val-watt">0000</span><span class="unit">W</span>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-label">Current</div>
+                        <div class="jp-label">電流 (Ampere)</div>
+                    </div>
+                    <div class="icon-circle bg-amp">A</div>
+                </div>
+                <div class="value-container">
+                    <span id="val-amp" class="value txt-amp">0.00</span>
+                    <span class="unit">A</span>
+                </div>
             </div>
-        </div>
 
-        <div class="card">
-            <div class="corner top-right"></div>
-            <div class="corner bottom-left"></div>
-            <div class="card-label">Total Energy</div>
-            <div class="value e-color">
-                <span id="val-kwh">000.0</span><span class="unit">kWh</span>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-label">Power</div>
+                        <div class="jp-label">電力 (Watt)</div>
+                    </div>
+                    <div class="icon-circle bg-watt">W</div>
+                </div>
+                <div class="value-container">
+                    <span id="val-watt" class="value txt-watt">0000</span>
+                    <span class="unit">W</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-label">Energy</div>
+                        <div class="jp-label">エネルギー (kWh)</div>
+                    </div>
+                    <div class="icon-circle bg-kwh">E</div>
+                </div>
+                <div class="value-container">
+                    <span id="val-kwh" class="value txt-kwh">000.0</span>
+                    <span class="unit">kWh</span>
+                </div>
             </div>
         </div>
     </div>
 
     <footer>
-        IOT SYSTEM | PZEM-017 | MQTT WEBSOCKET
+        IOT DASHBOARD PROJECT • PZEM-017
     </footer>
 
     <script>
-        // --- KONFIGURASI MQTT ---
-        // Gunakan Port WSS (Secure WebSocket) karena GitHub Pages menggunakan HTTPS
-        // Untuk broker.emqx.io, port WSS adalah 8084
+        // --- LOGIC JAVASCRIPT (TIDAK BERUBAH DARI ASLINYA) ---
+        // Hanya logika visual sedikit ditambah untuk efek
+        
         const mqtt_broker = "broker.emqx.io";
         const mqtt_port = 8084; 
-        const mqtt_topic = "kampus/pzem017/data"; // Harus SAMA PERSIS dengan Python
-        const client_id = "web_dashboard_" + Math.random().toString(16).substr(2, 8);
+        const mqtt_topic = "kampus/pzem017/data";
+        const client_id = "anime_dash_" + Math.random().toString(16).substr(2, 8);
 
-        // Membuat Client
         const client = new Paho.MQTT.Client(mqtt_broker, mqtt_port, client_id);
 
-        // Handler saat koneksi putus
         client.onConnectionLost = function (responseObject) {
             console.log("Connection Lost: " + responseObject.errorMessage);
-            document.getElementById("status").innerHTML = "System Status: DISCONNECTED";
-            document.getElementById("status").className = "status-disconnected";
+            const statusEl = document.getElementById("status");
+            statusEl.innerHTML = "⚠ DISCONNECTED / 接続切れ";
+            statusEl.className = "status-disconnected";
         };
 
-        // Handler saat pesan masuk
         client.onMessageArrived = function (message) {
-            console.log("Data diterima: " + message.payloadString);
+            console.log("Data: " + message.payloadString);
             
             try {
-                // Parsing data JSON dari Python
                 const data = JSON.parse(message.payloadString);
 
-                // Update tampilan HTML (dengan format angka fixed decimal)
-                // Tegangan
-                document.getElementById("val-volt").innerText = parseFloat(data.tegangan).toFixed(0); 
-                
-                // Arus
-                document.getElementById("val-amp").innerText = parseFloat(data.arus).toFixed(2);
-                
-                // Daya
-                document.getElementById("val-watt").innerText = parseFloat(data.daya).toFixed(1);
-                
-                // Energi
-                document.getElementById("val-kwh").innerText = parseFloat(data.energi).toFixed(3);
-
-                // Efek kedip visual saat data masuk (opsional)
-                const cards = document.querySelectorAll('.card');
-                cards.forEach(card => {
-                    card.style.borderColor = '#fff';
-                    setTimeout(() => card.style.borderColor = 'rgba(0, 255, 255, 0.3)', 100);
-                });
+                // Update Data
+                updateValue("val-volt", parseFloat(data.tegangan).toFixed(0));
+                updateValue("val-amp", parseFloat(data.arus).toFixed(2));
+                updateValue("val-watt", parseFloat(data.daya).toFixed(1));
+                updateValue("val-kwh", parseFloat(data.energi).toFixed(3));
 
             } catch (e) {
                 console.error("Error parsing JSON: ", e);
             }
         };
 
-        // Opsi Koneksi
+        // Fungsi helper untuk animasi update angka
+        function updateValue(id, newValue) {
+            const el = document.getElementById(id);
+            if (el.innerText !== newValue) {
+                el.innerText = newValue;
+                // Efek "Pop" kecil saat angka berubah
+                el.style.transform = "scale(1.2)";
+                setTimeout(() => el.style.transform = "scale(1)", 200);
+            }
+        }
+
         const options = {
-            useSSL: true, // Wajib True untuk GitHub Pages
+            useSSL: true,
             onSuccess: function () {
                 console.log("MQTT Connected!");
-                document.getElementById("status").innerHTML = "System Status: ONLINE LINK ESTABLISHED";
-                document.getElementById("status").className = "status-connected";
+                const statusEl = document.getElementById("status");
+                statusEl.innerHTML = "★ ONLINE / システム稼働中 ★";
+                statusEl.className = "status-connected";
                 
-                // Subscribe ke topik
                 client.subscribe(mqtt_topic);
             },
             onFailure: function (message) {
                 console.log("Connection Failed: " + message.errorMessage);
-                document.getElementById("status").innerHTML = "System Status: CONNECTION FAILED";
-                document.getElementById("status").className = "status-disconnected";
+                const statusEl = document.getElementById("status");
+                statusEl.innerHTML = "⚠ CONNECTION FAILED";
+                statusEl.className = "status-disconnected";
             }
         };
 
-        // Mulai Koneksi
-        console.log("Connecting to MQTT Broker...");
+        console.log("Connecting...");
         client.connect(options);
 
     </script>
